@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"unicode/utf8"
 )
 
 // listBinEntry holds path (')' as segment separator) and size from list.bin; Size is 0 when not present.
@@ -318,9 +319,65 @@ type pathCandidate struct {
 	IsLocaleFallback bool
 }
 
+// utf8ToMojibake re-encodes non-ASCII runes as if each of their UTF-8 bytes
+// were a Latin-1 codepoint. This matches filenames extracted by tools that
+// misinterpret UTF-8 paths as Latin-1 (double-encoding). For example,
+// U+FF12 (fullwidth ２, bytes EF BC 92) becomes U+00EF U+00BC U+0092
+// (bytes C3 AF C2 BC C2 92).
+func utf8ToMojibake(s string) string {
+	var b strings.Builder
+	changed := false
+	for _, r := range s {
+		if r >= 0x80 {
+			var buf [4]byte
+			n := utf8.EncodeRune(buf[:], r)
+			for i := 0; i < n; i++ {
+				b.WriteRune(rune(buf[i]))
+			}
+			changed = true
+		} else {
+			b.WriteRune(r)
+		}
+	}
+	if !changed {
+		return s
+	}
+	return b.String()
+}
+
+// normalizeFullwidth replaces fullwidth Unicode characters (U+FF01–U+FF5E)
+// with their ASCII equivalents (U+0021–U+007E).
+func normalizeFullwidth(s string) string {
+	var b strings.Builder
+	changed := false
+	for _, r := range s {
+		if r >= 0xFF01 && r <= 0xFF5E {
+			b.WriteByte(byte(r - 0xFF01 + 0x21))
+			changed = true
+		} else {
+			b.WriteRune(r)
+		}
+	}
+	if !changed {
+		return s
+	}
+	return b.String()
+}
+
+func hasNonASCII(s string) bool {
+	for _, r := range s {
+		if r >= 0x80 {
+			return true
+		}
+	}
+	return false
+}
+
 // pathStrToFullPaths converts a list.bin path string (using ')' separators) into filesystem
 // candidates. The original locale path is returned first; if the path contains ja or ko,
 // an en locale fallback is appended (marked IsLocaleFallback so callers can skip MD5 validation).
+// For paths with non-ASCII characters, mojibake (double-encoded) and fullwidth-to-ASCII
+// variants are also tried.
 func pathStrToFullPaths(revision, assetType, pathStr string) []pathCandidate {
 	fsPath := strings.ReplaceAll(pathStr, ")", "/")
 	if strings.Contains(fsPath, "..") || filepath.IsAbs(fsPath) || strings.HasPrefix(fsPath, "/") {
@@ -335,6 +392,10 @@ func pathStrToFullPaths(revision, assetType, pathStr string) []pathCandidate {
 		fallback bool
 	}
 	entries := []tagged{{pathStr, false}}
+	if hasNonASCII(pathStr) {
+		entries = append(entries, tagged{utf8ToMojibake(pathStr), false})
+		entries = append(entries, tagged{normalizeFullwidth(pathStr), false})
+	}
 	if strings.Contains(pathStr, ")ja)") {
 		entries = append(entries, tagged{strings.ReplaceAll(pathStr, ")ja)", ")en)"), true})
 	}
