@@ -175,6 +175,18 @@ func (s *MemoryStore) ReplaceCatalog(entries []store.GachaCatalogEntry) error {
 	return nil
 }
 
+func (s *MemoryStore) SaveAutoSave() {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.snapshotDir == "" {
+		return
+	}
+	for _, user := range s.users {
+		saveAutoSave(user, s.snapshotDir)
+	}
+}
+
 func (s *MemoryStore) getOrCreateLocked(uuid string) *store.UserState {
 	if userId, ok := s.userIdsByUuid[uuid]; ok {
 		return s.users[userId]
