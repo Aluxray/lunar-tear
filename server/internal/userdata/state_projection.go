@@ -115,6 +115,9 @@ func FirstEntranceClientTableMap(user store.UserState) map[string]string {
 		"IUserParts",
 		"IUserWeaponNote",
 		"IUserWeaponStory",
+		"IUserWeaponSkill",
+		"IUserWeaponAbility",
+		"IUserWeaponAwaken",
 		"IUserCostumeActiveSkill",
 		"IUserDeckTypeNote",
 	} {

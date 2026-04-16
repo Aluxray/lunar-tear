@@ -156,6 +156,15 @@ func (g *PossessionGranter) GrantCostume(user *UserState, costumeId int32, nowMi
 
 func (g *PossessionGranter) GrantWeapon(user *UserState, weaponId int32, nowMillis int64) {
 	key := fmt.Sprintf("reward-weapon-%d-%d", weaponId, nowMillis)
+	if _, exists := user.Weapons[key]; exists {
+		for i := 2; ; i++ {
+			candidate := fmt.Sprintf("%s-%d", key, i)
+			if _, exists := user.Weapons[candidate]; !exists {
+				key = candidate
+				break
+			}
+		}
+	}
 	user.Weapons[key] = WeaponState{
 		UserWeaponUuid:      key,
 		WeaponId:            weaponId,
