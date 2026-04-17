@@ -4,8 +4,10 @@ import (
 	"flag"
 	"log"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"lunar-tear/server/internal/gacha"
 	"lunar-tear/server/internal/gametime"
@@ -64,6 +66,15 @@ func main() {
 	if *scene != 0 {
 		log.Printf("bootstrap scene: %d (from snapshot)", *scene)
 	}
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		log.Println("[shutdown] writing scene_-1.json...")
+		userStore.SaveAutoSave()
+		os.Exit(0)
+	}()
 
 	gachaEntries, medalInfo, err := masterdata.LoadGachaCatalog()
 	if err != nil {

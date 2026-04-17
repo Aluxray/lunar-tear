@@ -45,3 +45,17 @@ func loadSnapshot(dir string, sceneId int32) (*store.UserState, error) {
 	user.EnsureMaps()
 	return &user, nil
 }
+
+func saveAutoSave(user *store.UserState, dir string) {
+	data, err := json.MarshalIndent(user, "", "  ")
+	if err != nil {
+		log.Printf("[snapshot] auto_save marshal error: %v", err)
+		return
+	}
+	path := filepath.Join(dir, "scene_-1.json")
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		log.Printf("[snapshot] auto_save write error: %v", err)
+		return
+	}
+	log.Printf("[snapshot] auto_save written (%d bytes)", len(data))
+}
