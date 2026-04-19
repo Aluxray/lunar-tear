@@ -126,8 +126,8 @@ func writeUserState(tx *sql.Tx, uid int64, u *store.UserState) error {
 		}
 	}
 	for _, v := range u.Costumes {
-		if err := exec(`INSERT INTO user_costumes (user_id, user_costume_uuid, costume_id, limit_break_count, level, exp, headup_display_view_id, acquisition_datetime, awaken_count, latest_version) VALUES (?,?,?,?,?,?,?,?,?,?)`,
-			uid, v.UserCostumeUuid, v.CostumeId, v.LimitBreakCount, v.Level, v.Exp, v.HeadupDisplayViewId, v.AcquisitionDatetime, v.AwakenCount, v.LatestVersion); err != nil {
+		if err := exec(`INSERT INTO user_costumes (user_id, user_costume_uuid, costume_id, limit_break_count, level, exp, headup_display_view_id, acquisition_datetime, awaken_count, costume_lottery_effect_unlocked_slot_count, latest_version) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+			uid, v.UserCostumeUuid, v.CostumeId, v.LimitBreakCount, v.Level, v.Exp, v.HeadupDisplayViewId, v.AcquisitionDatetime, v.AwakenCount, v.CostumeLotteryEffectUnlockedSlotCount, v.LatestVersion); err != nil {
 			return err
 		}
 	}
@@ -257,6 +257,18 @@ func writeUserState(tx *sql.Tx, uid int64, u *store.UserState) error {
 	for k, v := range u.CostumeAwakenStatusUps {
 		if err := exec(`INSERT INTO user_costume_awaken_status_ups (user_id, user_costume_uuid, status_calculation_type, hp, attack, vitality, agility, critical_ratio, critical_attack, latest_version) VALUES (?,?,?,?,?,?,?,?,?,?)`,
 			uid, k.UserCostumeUuid, int32(k.StatusCalculationType), v.Hp, v.Attack, v.Vitality, v.Agility, v.CriticalRatio, v.CriticalAttack, v.LatestVersion); err != nil {
+			return err
+		}
+	}
+	for k, v := range u.CostumeLotteryEffects {
+		if err := exec(`INSERT INTO user_costume_lottery_effects (user_id, user_costume_uuid, slot_number, odds_number, latest_version) VALUES (?,?,?,?,?)`,
+			uid, k.UserCostumeUuid, k.SlotNumber, v.OddsNumber, v.LatestVersion); err != nil {
+			return err
+		}
+	}
+	for _, v := range u.CostumeLotteryEffectPending {
+		if err := exec(`INSERT INTO user_costume_lottery_effect_pending (user_id, user_costume_uuid, slot_number, odds_number, latest_version) VALUES (?,?,?,?,?)`,
+			uid, v.UserCostumeUuid, v.SlotNumber, v.OddsNumber, v.LatestVersion); err != nil {
 			return err
 		}
 	}
@@ -640,8 +652,8 @@ func diffAndSave(tx *sql.Tx, uid int64, before, after *store.UserState) error {
 		"character_id, level, exp, latest_version")
 	diffMapStr(tx, uid, before.Costumes, after.Costumes, "user_costumes", "user_costume_uuid",
 		func(v store.CostumeState) []any {
-			return []any{v.UserCostumeUuid, v.CostumeId, v.LimitBreakCount, v.Level, v.Exp, v.HeadupDisplayViewId, v.AcquisitionDatetime, v.AwakenCount, v.LatestVersion}
-		}, "user_costume_uuid, costume_id, limit_break_count, level, exp, headup_display_view_id, acquisition_datetime, awaken_count, latest_version")
+			return []any{v.UserCostumeUuid, v.CostumeId, v.LimitBreakCount, v.Level, v.Exp, v.HeadupDisplayViewId, v.AcquisitionDatetime, v.AwakenCount, v.CostumeLotteryEffectUnlockedSlotCount, v.LatestVersion}
+		}, "user_costume_uuid, costume_id, limit_break_count, level, exp, headup_display_view_id, acquisition_datetime, awaken_count, costume_lottery_effect_unlocked_slot_count, latest_version")
 	diffMapStr(tx, uid, before.Weapons, after.Weapons, "user_weapons", "user_weapon_uuid",
 		func(v store.WeaponState) []any {
 			return []any{v.UserWeaponUuid, v.WeaponId, v.Level, v.Exp, v.LimitBreakCount, boolToInt(v.IsProtected), v.AcquisitionDatetime, v.LatestVersion}
@@ -707,7 +719,9 @@ func diffAndSave(tx *sql.Tx, uid int64, before, after *store.UserState) error {
 			return []any{v.MissionId, v.StartDatetime, v.ProgressValue, v.MissionProgressStatusType, v.ClearDatetime, v.LatestVersion}
 		}, "mission_id, start_datetime, progress_value, mission_progress_status_type, clear_datetime, latest_version")
 	diffMapInt32(tx, uid, before.Tutorials, after.Tutorials, "user_tutorials", "tutorial_type",
-		func(v store.TutorialProgressState) []any { return []any{v.TutorialType, v.ProgressPhase, v.ChoiceId, v.LatestVersion} },
+		func(v store.TutorialProgressState) []any {
+			return []any{v.TutorialType, v.ProgressPhase, v.ChoiceId, v.LatestVersion}
+		},
 		"tutorial_type, progress_phase, choice_id, latest_version")
 
 	diffMapInt32(tx, uid, before.SideStoryQuests, after.SideStoryQuests, "user_side_story_quests", "side_story_quest_id",
@@ -719,7 +733,9 @@ func diffAndSave(tx *sql.Tx, uid int64, before, after *store.UserState) error {
 			return []any{0, v.LimitContentQuestStatusType, v.EventQuestChapterId, v.LatestVersion}
 		}, "limit_content_id, limit_content_quest_status_type, event_quest_chapter_id, latest_version")
 	diffMapInt32(tx, uid, before.WeaponStories, after.WeaponStories, "user_weapon_stories", "weapon_id",
-		func(v store.WeaponStoryState) []any { return []any{v.WeaponId, v.ReleasedMaxStoryIndex, v.LatestVersion} },
+		func(v store.WeaponStoryState) []any {
+			return []any{v.WeaponId, v.ReleasedMaxStoryIndex, v.LatestVersion}
+		},
 		"weapon_id, released_max_story_index, latest_version")
 	diffMapInt32(tx, uid, before.WeaponNotes, after.WeaponNotes, "user_weapon_notes", "weapon_id",
 		func(v store.WeaponNoteState) []any {
@@ -761,12 +777,31 @@ func diffAndSave(tx *sql.Tx, uid int64, before, after *store.UserState) error {
 		}
 	}
 
+	for k, v := range after.CostumeLotteryEffects {
+		if old, ok := before.CostumeLotteryEffects[k]; !ok || old != v {
+			exec(`INSERT OR REPLACE INTO user_costume_lottery_effects (user_id, user_costume_uuid, slot_number, odds_number, latest_version) VALUES (?,?,?,?,?)`,
+				uid, k.UserCostumeUuid, k.SlotNumber, v.OddsNumber, v.LatestVersion)
+		}
+	}
+	for k := range before.CostumeLotteryEffects {
+		if _, ok := after.CostumeLotteryEffects[k]; !ok {
+			exec(`DELETE FROM user_costume_lottery_effects WHERE user_id=? AND user_costume_uuid=? AND slot_number=?`, uid, k.UserCostumeUuid, k.SlotNumber)
+		}
+	}
+
+	diffMapStr(tx, uid, before.CostumeLotteryEffectPending, after.CostumeLotteryEffectPending, "user_costume_lottery_effect_pending", "user_costume_uuid",
+		func(v store.CostumeLotteryEffectPendingState) []any {
+			return []any{v.UserCostumeUuid, v.SlotNumber, v.OddsNumber, v.LatestVersion}
+		}, "user_costume_uuid, slot_number, odds_number, latest_version")
+
 	diffMapStr(tx, uid, before.Parts, after.Parts, "user_parts", "user_parts_uuid",
 		func(v store.PartsState) []any {
 			return []any{v.UserPartsUuid, v.PartsId, v.Level, v.PartsStatusMainId, boolToInt(v.IsProtected), v.AcquisitionDatetime, v.LatestVersion}
 		}, "user_parts_uuid, parts_id, level, parts_status_main_id, is_protected, acquisition_datetime, latest_version")
 	diffMapInt32(tx, uid, before.PartsGroupNotes, after.PartsGroupNotes, "user_parts_group_notes", "parts_group_id",
-		func(v store.PartsGroupNoteState) []any { return []any{v.PartsGroupId, v.FirstAcquisitionDatetime, v.LatestVersion} },
+		func(v store.PartsGroupNoteState) []any {
+			return []any{v.PartsGroupId, v.FirstAcquisitionDatetime, v.LatestVersion}
+		},
 		"parts_group_id, first_acquisition_datetime, latest_version")
 	diffMapInt32(tx, uid, before.PartsPresets, after.PartsPresets, "user_parts_presets", "user_parts_preset_number",
 		func(v store.PartsPresetState) []any {
@@ -792,10 +827,14 @@ func diffAndSave(tx *sql.Tx, uid int64, before, after *store.UserState) error {
 	diffInt64Map(tx, uid, before.PremiumItems, after.PremiumItems, "user_premium_items", "premium_item_id", "count")
 
 	diffMapInt32(tx, uid, before.ExploreScores, after.ExploreScores, "user_explore_scores", "explore_id",
-		func(v store.ExploreScoreState) []any { return []any{v.ExploreId, v.MaxScore, v.MaxScoreUpdateDatetime, v.LatestVersion} },
+		func(v store.ExploreScoreState) []any {
+			return []any{v.ExploreId, v.MaxScore, v.MaxScoreUpdateDatetime, v.LatestVersion}
+		},
 		"explore_id, max_score, max_score_update_datetime, latest_version")
 	diffMapInt32(tx, uid, before.AutoSaleSettings, after.AutoSaleSettings, "user_auto_sale_settings", "possession_auto_sale_item_type",
-		func(v store.AutoSaleSettingState) []any { return []any{v.PossessionAutoSaleItemType, v.PossessionAutoSaleItemValue} },
+		func(v store.AutoSaleSettingState) []any {
+			return []any{v.PossessionAutoSaleItemType, v.PossessionAutoSaleItemValue}
+		},
 		"possession_auto_sale_item_type, possession_auto_sale_item_value")
 	diffBoolMap(tx, uid, before.NaviCutInPlayed, after.NaviCutInPlayed, "user_navi_cutin_played", "navi_cutin_id")
 	diffTimestampMap(tx, uid, before.ViewedMovies, after.ViewedMovies, "user_viewed_movies", "movie_id")
@@ -876,17 +915,23 @@ func diffAndSave(tx *sql.Tx, uid int64, before, after *store.UserState) error {
 	}
 
 	diffMapInt32(tx, uid, before.CharacterRebirths, after.CharacterRebirths, "user_character_rebirths", "character_id",
-		func(v store.CharacterRebirthState) []any { return []any{v.CharacterId, v.RebirthCount, v.LatestVersion} },
+		func(v store.CharacterRebirthState) []any {
+			return []any{v.CharacterId, v.RebirthCount, v.LatestVersion}
+		},
 		"character_id, rebirth_count, latest_version")
 	diffMapInt32(tx, uid, before.CageOrnamentRewards, after.CageOrnamentRewards, "user_cage_ornament_rewards", "cage_ornament_id",
-		func(v store.CageOrnamentRewardState) []any { return []any{v.CageOrnamentId, v.AcquisitionDatetime, v.LatestVersion} },
+		func(v store.CageOrnamentRewardState) []any {
+			return []any{v.CageOrnamentId, v.AcquisitionDatetime, v.LatestVersion}
+		},
 		"cage_ornament_id, acquisition_datetime, latest_version")
 	diffMapInt32(tx, uid, before.ShopItems, after.ShopItems, "user_shop_items", "shop_item_id",
 		func(v store.UserShopItemState) []any {
 			return []any{v.ShopItemId, v.BoughtCount, v.LatestBoughtCountChangedDatetime, v.LatestVersion}
 		}, "shop_item_id, bought_count, latest_bought_count_changed_datetime, latest_version")
 	diffMapInt32(tx, uid, before.ShopReplaceableLineup, after.ShopReplaceableLineup, "user_shop_replaceable_lineup", "slot_number",
-		func(v store.UserShopReplaceableLineupState) []any { return []any{v.SlotNumber, v.ShopItemId, v.LatestVersion} },
+		func(v store.UserShopReplaceableLineupState) []any {
+			return []any{v.SlotNumber, v.ShopItemId, v.LatestVersion}
+		},
 		"slot_number, shop_item_id, latest_version")
 
 	// Gimmick tables (composite keys)
@@ -941,10 +986,14 @@ func diffAndSave(tx *sql.Tx, uid int64, before, after *store.UserState) error {
 
 	// Big hunt maps
 	diffMapInt32(tx, uid, before.BigHuntMaxScores, after.BigHuntMaxScores, "user_big_hunt_max_scores", "big_hunt_boss_id",
-		func(v store.BigHuntMaxScore) []any { return []any{0, v.MaxScore, v.MaxScoreUpdateDatetime, v.LatestVersion} },
+		func(v store.BigHuntMaxScore) []any {
+			return []any{0, v.MaxScore, v.MaxScoreUpdateDatetime, v.LatestVersion}
+		},
 		"big_hunt_boss_id, max_score, max_score_update_datetime, latest_version")
 	diffMapInt32(tx, uid, before.BigHuntStatuses, after.BigHuntStatuses, "user_big_hunt_statuses", "big_hunt_boss_id",
-		func(v store.BigHuntStatus) []any { return []any{0, v.DailyChallengeCount, v.LatestChallengeDatetime, v.LatestVersion} },
+		func(v store.BigHuntStatus) []any {
+			return []any{0, v.DailyChallengeCount, v.LatestChallengeDatetime, v.LatestVersion}
+		},
 		"big_hunt_boss_id, daily_challenge_count, latest_challenge_datetime, latest_version")
 
 	for k, v := range after.BigHuntScheduleMaxScores {

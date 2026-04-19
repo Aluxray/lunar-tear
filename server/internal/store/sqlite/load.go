@@ -53,6 +53,8 @@ func initMaps(u *store.UserState) {
 	u.WeaponAwakens = make(map[string]store.WeaponAwakenState)
 	u.CostumeActiveSkills = make(map[string]store.CostumeActiveSkillState)
 	u.CostumeAwakenStatusUps = make(map[store.CostumeAwakenStatusKey]store.CostumeAwakenStatusUpState)
+	u.CostumeLotteryEffects = make(map[store.CostumeLotteryEffectKey]store.CostumeLotteryEffectState)
+	u.CostumeLotteryEffectPending = make(map[string]store.CostumeLotteryEffectPendingState)
 	u.Parts = make(map[string]store.PartsState)
 	u.PartsGroupNotes = make(map[int32]store.PartsGroupNoteState)
 	u.PartsPresets = make(map[int32]store.PartsPresetState)
@@ -220,11 +222,13 @@ func loadMapTables(db *sql.DB, uid int64, u *store.UserState) {
 		})
 
 	queryRows(db, `SELECT user_costume_uuid, costume_id, limit_break_count, level, exp,
-		headup_display_view_id, acquisition_datetime, awaken_count, latest_version
+		headup_display_view_id, acquisition_datetime, awaken_count,
+		costume_lottery_effect_unlocked_slot_count, latest_version
 		FROM user_costumes WHERE user_id=?`, uid, func(rows *sql.Rows) {
 		var v store.CostumeState
 		rows.Scan(&v.UserCostumeUuid, &v.CostumeId, &v.LimitBreakCount, &v.Level, &v.Exp,
-			&v.HeadupDisplayViewId, &v.AcquisitionDatetime, &v.AwakenCount, &v.LatestVersion)
+			&v.HeadupDisplayViewId, &v.AcquisitionDatetime, &v.AwakenCount,
+			&v.CostumeLotteryEffectUnlockedSlotCount, &v.LatestVersion)
 		u.Costumes[v.UserCostumeUuid] = v
 	})
 
@@ -400,6 +404,24 @@ func loadMapTables(db *sql.DB, uid int64, u *store.UserState) {
 			u.CostumeAwakenStatusUps[store.CostumeAwakenStatusKey{
 				UserCostumeUuid: v.UserCostumeUuid, StatusCalculationType: v.StatusCalculationType,
 			}] = v
+		})
+
+	queryRows(db, `SELECT user_costume_uuid, slot_number, odds_number, latest_version
+		FROM user_costume_lottery_effects WHERE user_id=?`, uid,
+		func(rows *sql.Rows) {
+			var v store.CostumeLotteryEffectState
+			rows.Scan(&v.UserCostumeUuid, &v.SlotNumber, &v.OddsNumber, &v.LatestVersion)
+			u.CostumeLotteryEffects[store.CostumeLotteryEffectKey{
+				UserCostumeUuid: v.UserCostumeUuid, SlotNumber: v.SlotNumber,
+			}] = v
+		})
+
+	queryRows(db, `SELECT user_costume_uuid, slot_number, odds_number, latest_version
+		FROM user_costume_lottery_effect_pending WHERE user_id=?`, uid,
+		func(rows *sql.Rows) {
+			var v store.CostumeLotteryEffectPendingState
+			rows.Scan(&v.UserCostumeUuid, &v.SlotNumber, &v.OddsNumber, &v.LatestVersion)
+			u.CostumeLotteryEffectPending[v.UserCostumeUuid] = v
 		})
 
 	queryRows(db, `SELECT user_parts_uuid, parts_id, level, parts_status_main_id, is_protected,
