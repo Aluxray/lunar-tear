@@ -47,7 +47,7 @@ func (s *DataServiceServer) GetUserData(ctx context.Context, req *pb.UserDataGet
 		return nil, fmt.Errorf("snapshot user: %w", err)
 	}
 
-	defaults := userdata.FirstEntranceClientTableMap(user)
+	defaults := userdata.FullClientTableMap(user)
 	result := userdata.SelectTables(defaults, req.TableName)
 	return &pb.UserDataGetResponse{
 		UserDataJson: result,
