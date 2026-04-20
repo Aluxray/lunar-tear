@@ -50,18 +50,19 @@ goto parse_args
 if "%SERVER_PATH:~-1%"=="\" set "SERVER_PATH=%SERVER_PATH:~0,-1%"
 
 :: Recover last scene created in snaphots
-if "%SCENE%"=="" (
-    for /f "tokens=2 delims=_." %%N in ('dir /b /o-d %SERVER_PATH%\snapshots\scene_*.json') do (
-        set "SCENE=%%N"
-        goto :end_loop
-    )
-    :end_loop
-    echo [i] Loaded scene !SCENE!.
-)
+@REM if "%SCENE%"=="" (
+@REM     for /f "tokens=2 delims=_." %%N in ('dir /b /o-d %SERVER_PATH%\snapshots\scene_*.json') do (
+@REM         set "SCENE=%%N"
+@REM         goto :end_loop
+@REM     )
+@REM     :end_loop
+@REM     echo [i] Loaded scene !SCENE!.
+@REM )
 
 :: Launch server
 cd %SERVER_PATH%
-go run .\cmd\lunar-tear --host %HOST% --http-port %PORT% --scene %SCENE%
+:: go run .\cmd\lunar-tear --host %HOST% --http-port %PORT% --scene %SCENE%
+go run .\cmd\lunar-tear --host %HOST% --http-port %PORT%
 if errorlevel 1 ( echo ERROR: couldn't launch server & exit /b 1 )
 
 endlocal
