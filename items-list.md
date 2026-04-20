@@ -1,0 +1,62 @@
+# Under ConsumableItems 
+- `1`: Gold
+- `126`: New Year's Celebration Medal
+- `2003`: Skip Ticket
+- `1002`: Premium Summon Ticket
+- `1008`: Windblown Sand Summon Ticket
+- `1009`: Grains of Sand Summon Ticket
+- `8003`: Automata Crossover Shard
+- `8066`: Abyssal Girl Shard
+- `8069`: Monthly Multi Step Summons Medal
+- `8084`: Abyssal Monster Shard
+- `8091`: Abyssal Assassin Shard
+- `8109`: Abyssal Weapon/Prisoner Shard
+- `8122`: Abyssal Soldier Shard
+- `8132`: Black Friday Awakening Summons Medal
+- `8233`: Abyssal Songstress Shard
+
+# Under Materials
+- `100001`: SM Character Enhancement
+- `100002`: M Character Enhancement
+- `100003`: I'm assuming L Char Enhance, but don't have it listed.
+- `100004`: XL Character Enhancement
+- `200001`: SM Weapon Enhancement
+- `200002`: M Weap Enhance
+- `200003`: Not listed but assume L Weap Enhance
+- `200004`: XL Weapon Enhancement
+- `300001`: Nepheline
+- `300002`: Zeolite
+- `300003`: Rattlestone
+- `300023`: Insignia of Skill
+- `300024`: Insignia of Quality
+- `302113`: Supreme Adoration
+- `311003`: ADV Handbook
+
+# Texts
+- `311008`: Peaceful Text Vengeful Attacker
+- `311012`: Battle Txt Dissenting Girl
+- `311019`: Btl Txt Dissenting Traveler
+- `311026`: Btl Txt Guardian Gunman
+- `311041`: Btl Txt Dissenting Prisoner
+- `311045`: Btl Txt Dissenting Captive
+- `311046`: Warfare Text Reborn Inmate
+- `311049`: Btl Txt Dissenting Soldier
+- `311060`: Pcfl Txt Soulful Lad
+- `311062`: Pcfl Txt Puzzling Oddity
+- `311064`: Pcfl Txt The Aerie Warrior
+- `311069`: Pcfl Txt Progenitor Sister
+- `311071`: Btl Txt Guardian Girl
+- `311077`: Btl Txt Guardian Assassin
+- `311080`: Btl Txt Summer Traveler
+- `311106`: Warfare Txt Bloody Captive
+- `311124`: Wrfr Txt Celebratory Soldier
+- `311177`: Wrfr Txt Abyssal Prisoner
+- `312003`: Black Pearl
+- `312101`: Polycrystal of Thought
+- `321007`: Ruby
+- `321008`: Aquamarine
+- `321009`: Emerald
+- `321010`: Topaz
+- `321011`: Tanzanite
+- `322002`: Zenith's Brilliance
+- `501002`: Black Pearl Piece
